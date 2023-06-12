@@ -11,6 +11,7 @@ const Chart = () => {
     let legendsObj = {'Email':  true, 'Union Ads': true, 'Video Ads': true, 'Direct': true, 'Search Engine': true}
 
     let legendState = useRef({ ...legendsObj})
+    let lineHoverState = useRef({ 'Email':  false, 'Union Ads': false, 'Video Ads': false, 'Direct': false, 'Search Engine': false })
 
     useEffect(() => {
         // Initialize chart
@@ -83,33 +84,45 @@ const Chart = () => {
                 name: 'Email',
                 type: 'line',
                 data: [120, 132, 101, 134, 90, 230, 210],
-                // markLine: {
-                //     draggable: true,
-                //     data: [{name: 'asfaffff', xAxis: 'Tue'}],
-                // }
+                emphasis: {
+                    focus: 'series'
+                },
+                triggerLineEvent: true,
             },
             {
                 name: 'Union Ads',
                 type: 'line',
-
+                emphasis: {
+                    focus: 'series'
+                },
+                triggerLineEvent: true,
                 data: [220, 182, 191, 234, 290, 330, 310]
             },
             {
                 name: 'Video Ads',
                 type: 'line',
-
+                emphasis: {
+                    focus: 'series'
+                },
+                triggerLineEvent: true,
                 data: [150, 232, 201, 154, 190, 330, 410]
             },
             {
                 name: 'Direct',
                 type: 'line',
-
+                emphasis: {
+                    focus: 'series'
+                },
+                triggerLineEvent: true,
                 data: [320, 332, 301, 334, 390, 330, 320]
             },
             {
                 name: 'Search Engine',
                 type: 'line',
-
+                emphasis: {
+                    focus: 'series'
+                },
+                triggerLineEvent: true,
                 data: [820, 932, 901, 934, 1290, 1330, 1320]
             }
         ]
@@ -118,16 +131,16 @@ const Chart = () => {
     const getDataPerIndex = (index) => {
         debugger
         let output = []
-        output =options.series.map(({ data }) => {
-            return data[index]
-        })
-        const legendIndex = options.series.map((s) => legendState.current[s.name])
-        legendIndex.forEach((show, i) => {
-            if(!show) {
-                output.splice(i, 1)
+        output = options.series.map(({ name, data }) => {
+            if(legendState.current[name]) {
+                if(lineHoverState.current[name]) {
+                    return data[index] + 1000
+                }
+                return data[index]
             }
+            return undefined
         })
-        return output
+        return output.filter(a => a)
     }
 
     useEffect(() => {
@@ -136,15 +149,31 @@ const Chart = () => {
             const chart = getInstanceByDom(chartRef.current);
             chart.setOption(options);
 
-
             chart.on('legendselectchanged', (e) => {
-                legendsObj = e.selected
                 legendState.current = e.selected
                 options.graphic = options.graphic.map( g => {
                     return { ...g, textContent: { ...g.textContent, style: { text: `${getDataPerIndex(g.dataIndex)} `}}}
                 })
                 chart.setOption(options)
             });
+
+            chart.on('mouseover', { componentType: 'line' },(e) => {
+                debugger
+                lineHoverState.current[e.seriesName] = true
+                options.graphic = options.graphic.map( g => {
+                    return { ...g, textContent: { ...g.textContent, style: { text: `${getDataPerIndex(g.dataIndex)} `}}}
+                })
+                chart.setOption(options)
+            })
+
+            chart.on('mouseout', { componentType: 'line' },(e) => {
+
+                lineHoverState.current[e.seriesName] = false
+                options.graphic = options.graphic.map( g => {
+                    return { ...g, textContent: { ...g.textContent, style: { text: `${getDataPerIndex(g.dataIndex)} `}}}
+                })
+                chart.setOption(options)
+            })
 
             chart.on('click' , (event) => {
                 if(typeof event.event?.target?.id === 'string' && event.event.target.id.startsWith('line')) {
