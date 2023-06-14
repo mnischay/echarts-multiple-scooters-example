@@ -46,6 +46,19 @@ const Chart = () => {
     },);
 
 
+    let colors = ['blue', 'green', 'yellow', 'orange', 'red', 'violet', 'indigo', ]
+
+    const colorsToDashMap = {}
+
+    colors.forEach((color) => {
+        colorsToDashMap[`${color}Dash`] = {
+            backgroundColor: color,
+            borderRadius: 8,
+            padding: 4,
+            height: 1,
+            width: 10
+        }
+    })
     let options = {
         graphic: [],
         title: {
@@ -80,6 +93,7 @@ const Chart = () => {
         yAxis: {
             type: 'value'
         },
+        color: colors,
         series: [
             {
                 name: 'Email',
@@ -131,19 +145,22 @@ const Chart = () => {
     const getDataPerIndex = (index) => {
         // debugger
         let output = []
-        output = options.series.map(({ name, data }) => {
+        output = options.series.map(({ name, data }, i) => {
             if(legendState.current[name]) {
                 if(lineHoverState.current[name]) {
-                    return ['<b>' + name + ' : ', data[index] + '</b>']
+                    return `{${colors[i]}Dash|} {alBold|${name}}{arBold|${data[index]}}`
                 }
-                return [name + ' : ', data[index]]
+                return `{${colors[i]}Dash|} {al|${name}}{ar| ${data[index]}}`
             }
             return undefined
         })
         // debugger
-        let a = ([options.xAxis.data[index], '\n'].concat(output.filter(a => a).reverse()).join('\n'))
+        let a = ([`{title|${options.xAxis.data[index]}}`].concat(output.filter(a => a).reverse()).join('\n'))
         a = a.replaceAll(',', '')
         return a
+
+
+            //['{title|Wed}', '{fragment2|} {alBold|Search Engine}{arBold| 920}', '{al|Direct}{ar| 35}'].join('\n')
     }
 
     useEffect(() => {
@@ -188,7 +205,6 @@ const Chart = () => {
             })
 
             chart.on('click' , (event) => {
-                debugger
                 if(typeof event.event?.target?.id === 'string' && event.event.target.id.startsWith('line')) {
                     let index = -1
                     options.graphic = options.graphic.map((g, i) => {
@@ -207,6 +223,10 @@ const Chart = () => {
                     return
                 }
 
+                debugger
+                if(typeof event.event?.target?.id === 'string' && event.event.target.id.startsWith('rect')) {
+                    return;
+                }
                 options.graphic.push({
                     id:`group${numberOfElements}`,
                     $action: 'merge',
@@ -219,6 +239,7 @@ const Chart = () => {
                             type: 'rect',
                             id:`rect${numberOfElements}`,
                             z: 101,
+
                             shape: {
                                 x: event.event.offsetX + 30,
                                 y: chart.getHeight() / 4,
@@ -235,14 +256,57 @@ const Chart = () => {
                             },
                             textContent: {
                                 z: 102,
-                                        opacity: 0.9,
-
+                                opacity: 0.9,
+                                silent: true,
                                 style: {
+                                    text: getDataPerIndex(event.dataIndex),
+                                    // text: ['{title|Wed}', '{redDash|} {alBold|Search Engine}{arBold| 920}', '{al|Direct}{ar| 35}'].join('\n'),
+                                    rich: {
+                                        title: {
+                                            fontWeight: 'bold',
+                                            fontSize: 15
+                                        },
+                                        // redDash: {
+                                        //     backgroundColor: '#339911',
+                                        //     borderRadius: 8,
+                                        //     padding: 4,
+                                        //     height: 1,
+                                        //     width: 10
+                                        // },
+                                        ...colorsToDashMap,
+                                        al:{
+                                            fontSize: 15,
+                                            align: 'left'
+                                        },
+                                        ar:{
+                                            fontSize: 15,
+                                            fontWeight: 'bold',
+                                            align: 'right'
+                                        },
+                                        alBold:{
+                                            fontSize: 16,
+                                            fontWeight: 'bold',
+                                            align: 'left'
+                                        },
+                                        arBold:{
+                                            fontSize: 16,
+                                            fontWeight: 'bold',
+                                            align: 'right'
+                                        },
+                                    },
+                                    width: options.series.length * 35,
+                                    lineHeight: 25,
                                     fill: 'black',
-                                    text: `${getDataPerIndex(event.dataIndex)} `,
-                                    fontSize: '15px',
+
+                                    fontSize: 16,
+
                                 }
                             },
+                            // onclick : (e) => {
+                            //     debugger
+                            //     e.stop()
+                            //     e.cancelBubble = true
+                            // }
                         },
                         // {
                         //     type: 'text',
@@ -276,15 +340,6 @@ const Chart = () => {
                                 lineWidth: 1,
                                 lineDash: [4]
                             },
-
-                            // ondragstart: () => {
-                            //     chart.setOption({...options, tooltip: { ...options.tooltip, show: false}})
-                            // },
-                            //
-                            // ondragend: (e) => {
-                            //     // debugger;
-                            //     chart.setOption({...options, tooltip: { ...options.tooltip, show: true}})
-                            // },
                         },
 
                     ],
