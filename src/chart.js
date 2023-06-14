@@ -2,6 +2,7 @@ import React, {useRef, useEffect } from "react";
 import { getInstanceByDom, init, connect } from "echarts";
 
 
+let numberOfElements = 0
 const Chart = () => {
     const chartRef = useRef(null);
     const chartRef2 = useRef(null);
@@ -122,25 +123,27 @@ const Chart = () => {
                 emphasis: {
                     focus: 'series'
                 },
-                triggerLineEvent: true,
                 data: [820, 932, 901, 934, 1290, 1330, 1320]
             }
         ]
     }
 
     const getDataPerIndex = (index) => {
-        debugger
+        // debugger
         let output = []
         output = options.series.map(({ name, data }) => {
             if(legendState.current[name]) {
                 if(lineHoverState.current[name]) {
-                    return data[index] + 1000
+                    return ['<b>' + name + ' : ', data[index] + '</b>']
                 }
-                return data[index]
+                return [name + ' : ', data[index]]
             }
             return undefined
         })
-        return output.filter(a => a)
+        // debugger
+        let a = ([options.xAxis.data[index], '\n'].concat(output.filter(a => a).reverse()).join('\n'))
+        a = a.replaceAll(',', '')
+        return a
     }
 
     useEffect(() => {
@@ -152,16 +155,22 @@ const Chart = () => {
             chart.on('legendselectchanged', (e) => {
                 legendState.current = e.selected
                 options.graphic = options.graphic.map( g => {
-                    return { ...g, textContent: { ...g.textContent, style: { text: `${getDataPerIndex(g.dataIndex)} `}}}
+
+                    g.children[0].textContent.style.text = getDataPerIndex(g.dataIndex)
+
+                    return g
                 })
                 chart.setOption(options)
             });
 
             chart.on('mouseover', { componentType: 'line' },(e) => {
-                debugger
+
                 lineHoverState.current[e.seriesName] = true
                 options.graphic = options.graphic.map( g => {
-                    return { ...g, textContent: { ...g.textContent, style: { text: `${getDataPerIndex(g.dataIndex)} `}}}
+
+                    g.children[0].textContent.style.text = getDataPerIndex(g.dataIndex)
+
+                    return g
                 })
                 chart.setOption(options)
             })
@@ -170,79 +179,142 @@ const Chart = () => {
 
                 lineHoverState.current[e.seriesName] = false
                 options.graphic = options.graphic.map( g => {
-                    return { ...g, textContent: { ...g.textContent, style: { text: `${getDataPerIndex(g.dataIndex)} `}}}
+
+                    g.children[0].textContent.style.text = getDataPerIndex(g.dataIndex)
+
+                    return g
                 })
                 chart.setOption(options)
             })
 
             chart.on('click' , (event) => {
+                debugger
                 if(typeof event.event?.target?.id === 'string' && event.event.target.id.startsWith('line')) {
                     let index = -1
                     options.graphic = options.graphic.map((g, i) => {
-                        if (g.id === event.event.target.id ) {
+                        if (g.id === event.event.target.parent.id ) {
                             index = i
                             g.$action = 'remove'
+                            g.children = []
                         }
                         return g
                     })
-                    chart.setOption(options)
+
                     if(index !== -1) {
+                        chart.setOption(options)
                         options.graphic.splice(index, 1)
                     }
                     return
                 }
 
                 options.graphic.push({
-                    id:`line${options.graphic.length}`,
+                    id:`group${numberOfElements}`,
                     $action: 'merge',
-                    type: 'line',
-                    z: 100,
-                    shape: {
-                        x1: event.event.offsetX,
-                        y1: 0.1 * chart.getHeight(),
-                        x2: event.event.offsetX,
-                        y2: chart.getHeight() - (0.1 * chart.getHeight()),
-                    },
+                    type: 'group',
                     draggable: 'horizontal',
-                    style: {
-                        stroke: 'grey',
-                        lineWidth: 1,
-                        lineDash: [4]
-                    },
                     dataIndex: event.dataIndex,
-                    textContent: { type: 'text', z: 101, id: `line-text${options.graphic.length}`, style: { text: `${getDataPerIndex(event.dataIndex)} `}},
-                    textConfig: {
-                      position: 'right',
-                      layoutRect: {
-                          x: event.event.offsetX,
-                          y: event.event.offsetY,
-                          width: 30,
-                          height: 20
-                      },
+                    children: [
+                        {
+                            draggable: 'vertical',
+                            type: 'rect',
+                            id:`rect${numberOfElements}`,
+                            z: 101,
+                            shape: {
+                                x: event.event.offsetX + 30,
+                                y: chart.getHeight() / 4,
+                                height: options.series.length * 30,
+                                width: options.series.length * 40,
+                                r: 10
+                            },
+                            style: {
+                                fill: 'white',
+                                opacity: 0.9
+                            },
+                            textConfig: {
+                              position: 'inside'
+                            },
+                            textContent: {
+                                z: 102,
+                                        opacity: 0.9,
 
+                                style: {
+                                    fill: 'black',
+                                    text: `${getDataPerIndex(event.dataIndex)} `,
+                                    fontSize: '15px',
+                                }
+                            },
+                        },
+                        // {
+                        //     type: 'text',
+                        //     // draggable: 'vertical',
+                        //     z: 102,
+                        //     id:`text1${options.graphic.length}`,
+                        //     x: event.event.offsetX + 50,
+                        //     y: (chart.getHeight() / 4) + 20,
+                        //     dataIndex: event.dataIndex,
+                        //     style: {
+                        //         text: `${getDataPerIndex(event.dataIndex)} `,
+                        //         opacity: 0.9,
+                        //         fontSize: 15,
+                        //         // width: 100,
+                        //         // textAlign: 'center',
+                        //         // lineWidth: 30,
+                        //     }
+                        // },
+                        {
+                            type: 'line',
+                            z: 101,
+                            id:`line${numberOfElements}`,
+                            shape: {
+                                x1: event.event.offsetX,
+                                x2: event.event.offsetX,
+                                y1: 0.1 * chart.getHeight(),
+                                y2: chart.getHeight() - (0.1 * chart.getHeight()),
+                            },
+                            style: {
+                                stroke: 'grey',
+                                lineWidth: 1,
+                                lineDash: [4]
+                            },
+
+                            // ondragstart: () => {
+                            //     chart.setOption({...options, tooltip: { ...options.tooltip, show: false}})
+                            // },
+                            //
+                            // ondragend: (e) => {
+                            //     // debugger;
+                            //     chart.setOption({...options, tooltip: { ...options.tooltip, show: true}})
+                            // },
+                        },
+
+                    ],
+                    ondrag: ( e) => {
+                        // debugger
+                        const delta = 900 / (options.series[0].data.length - 1)
+                        const index = Math.round( (e.event.offsetX - 50) / delta)
+                        console.log(delta, index)
+                        // console.log(getDataPerIndex(index))
+                        // debugger
+                        const newIndex = options.graphic.findIndex((g) => g.id === e.target.id )
+
+                        if( newIndex !== -1) {
+                            options.graphic[newIndex].children[0].textContent.style.text = getDataPerIndex(index)
+                            options.graphic[newIndex].dataIndex = index
+                            console.log(options.graphic)
+                            // console.log(options)
+                            chart.setOption(options)
+                        }
                     },
                     ondragstart: () => {
-                        // chart.clear();
                         chart.setOption({...options, tooltip: { ...options.tooltip, show: false}})
-                        // chart.dispatchAction({
-                        //     type: 'hideTip'
-                        // })
                     },
-                    ondrag: ( e) => {
-                        const delta = 900 / options.series[0].data.length
-                        const index = Math.round( (e.event.offsetX - 50) / delta) - 1
-                        console.log(getDataPerIndex(index))
-                        const newIndex = options.graphic.findIndex((g) => g.id === e.target.id)
-                        options.graphic[newIndex].textContent.style.text = getDataPerIndex(index)
-                        console.log(options)
-                        chart.setOption(options)
-                    },
+
                     ondragend: (e) => {
-                        // debugger;
                         chart.setOption({...options, tooltip: { ...options.tooltip, show: true}})
                     },
                 })
                 chart.setOption(options)
+                numberOfElements = numberOfElements + 1
             })
         }
 
@@ -251,7 +323,6 @@ const Chart = () => {
             chart2.setOption(options);
         }
     }, ); // Whenever theme changes we need to add option and setting due to it being deleted in cleanup function
-
 
 
     return (<div style={{display: "flex", flexDirection: 'column'}}>
